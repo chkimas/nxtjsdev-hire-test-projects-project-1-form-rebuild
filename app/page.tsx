@@ -15,6 +15,7 @@ type DonationData = {
 export default function DonationForm() {
   const [step, setStep] = useState(1)
   const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<DonationData>({
     firstName: '',
     lastName: '',
@@ -27,13 +28,27 @@ export default function DonationForm() {
   const totalSteps = 3
 
   const update = (fields: Partial<DonationData>) => {
+    setError(null) // Clear errors when user provides input
     setData(prev => ({ ...prev, ...fields }))
   }
 
   const handleNext = (e: FormEvent) => {
     e.preventDefault()
-    if (step < totalSteps) setStep(s => s + 1)
-    else {
+
+    // Friendly validation errors
+    if (step === 1 && (!data.firstName || !data.lastName || !data.email)) {
+      setError("Please let us know who you are before moving to the next step.")
+      return
+    }
+    if (step === 2 && !data.presetAmount && !data.customAmount) {
+      setError("Please choose or enter an amount to continue.")
+      return
+    }
+
+    if (step < totalSteps) {
+      setStep(s => s + 1)
+    } else {
+      // Calculate final amount and log as a single object
       const amount = data.presetAmount ?? (data.customAmount ? parseFloat(data.customAmount) : 0)
       console.log("Donation Submitted:", { ...data, donationAmount: amount })
       setSubmitted(true)
@@ -43,6 +58,7 @@ export default function DonationForm() {
   const resetForm = () => {
     setStep(1)
     setSubmitted(false)
+    setError(null)
     setData({
       firstName: '',
       lastName: '',
@@ -73,13 +89,19 @@ export default function DonationForm() {
             <p className="text-sm text-gray-500 font-medium">Step {step} of {totalSteps}</p>
           </header>
 
+          {error && (
+            <div className="bg-red-50 text-red-700 p-3 rounded text-xs border border-red-100 animate-in fade-in">
+              {error}
+            </div>
+          )}
+
           {/* Logical grouping of fields per step */}
           {step === 1 && (
             <div className="space-y-3">
               <p className="font-semibold text-xs text-gray-400 uppercase tracking-wider border-b pb-1">Personal Details</p>
-              <Input label="First Name" value={data.firstName} onValueChange={v => update({ firstName: v })} required />
-              <Input label="Last Name" value={data.lastName} onValueChange={v => update({ lastName: v })} required />
-              <Input label="Email" type="email" value={data.email} onValueChange={v => update({ email: v })} required />
+              <Input label="First Name" value={data.firstName} onValueChange={v => update({ firstName: v })} />
+              <Input label="Last Name" value={data.lastName} onValueChange={v => update({ lastName: v })} />
+              <Input label="Email" type="email" value={data.email} onValueChange={v => update({ email: v })} />
             </div>
           )}
 
@@ -112,12 +134,16 @@ export default function DonationForm() {
 
           <footer className="flex justify-between items-center pt-4">
             {step > 1 && (
-              <button type="button" onClick={() => setStep(s => s - 1)} className="text-sm font-bold text-gray-400 hover:text-gray-600">
+              <button 
+                type="button" 
+                onClick={() => { setStep(s => s - 1); setError(null); }} 
+                className="text-sm font-bold text-gray-400 hover:text-gray-600"
+              >
                 Back
               </button>
             )}
             <button type="submit" className="ml-auto bg-gray-900 text-white px-5 py-2 rounded font-bold text-sm hover:bg-black transition-colors">
-              {step === totalSteps ? 'Confirm & Submit' : 'Continue'}
+              {step === totalSteps ? 'Submit' : 'Continue'}
             </button>
           </footer>
         </form>
@@ -126,13 +152,12 @@ export default function DonationForm() {
   )
 }
 
-// Explicitly defined helpers to reduce complexity
-function Input({ label, value, onValueChange, type = "text", required }: { 
+// Simple helpers to keep the main component readable
+function Input({ label, value, onValueChange, type = "text" }: { 
   label: string, 
   value: string, 
   onValueChange: (v: string) => void, 
-  type?: string,
-  required?: boolean 
+  type?: string
 }) {
   return (
     <div>
@@ -140,7 +165,6 @@ function Input({ label, value, onValueChange, type = "text", required }: {
       <input 
         type={type}
         value={value}
-        required={required}
         onChange={e => onValueChange(e.target.value)} 
         className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none transition-colors" 
       />
@@ -151,7 +175,7 @@ function Input({ label, value, onValueChange, type = "text", required }: {
 function SuccessView({ firstName, onReset }: { firstName: string, onReset: () => void }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <div className="bg-white p-8 rounded-lg shadow-md text-center max-w-sm border-t-4 border-green-500">
+      <div className="bg-white p-8 rounded-lg shadow-md text-center max-w-sm border-t-4 border-green-500 animate-in zoom-in">
         <h2 className="text-xl font-bold text-gray-800 mb-2">Thanks, {firstName}!</h2>
         <p className="text-gray-600 text-sm mb-6">Your donation has been logged successfully.</p>
         
